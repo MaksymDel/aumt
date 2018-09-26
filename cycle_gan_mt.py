@@ -381,6 +381,8 @@ if __name__ == '__main__':
     parser = create_parser()
     opts = parser.parse_args()
 
+    assert opts.num_decoding_steps >= opts.max_sent_len + 2
+
     if opts.no_cycle_consistency_loss == False:
         opts.sample_dir = 'samples_cyclegan'
 
