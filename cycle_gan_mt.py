@@ -323,7 +323,7 @@ def create_parser():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
-    parser.add_argument('--projection_type', type=str, default='gumbel',
+    parser.add_argument('--projection_type', type=str, default='gumbel', choices=['gumbel', 'softmax', 'direct'],
                         help="Defines how do we omit hte sampling step. Choices are 'gumbel', 'softmax', and 'direct'.")
 
     parser.add_argument('--gumbel_tau', type=float, default=0.0000000001)
@@ -353,7 +353,7 @@ def create_parser():
                         help='The number of layers in encoder RNN of discriminators.')
 
     # Training hyper-parameters
-    parser.add_argument('--train_iters', type=int, default=600,
+    parser.add_argument('--train_iters', type=int, default=10000000,
                         help='The number of training iterations to run (you can Ctrl-C out earlier if you want).')
     parser.add_argument('--batch_size', type=int, default=16, help='The number of sentences in a batch.')
     parser.add_argument('--num_workers', type=int, default=0,
@@ -371,9 +371,6 @@ def create_parser():
                         help='Path to the monolingual train set of language Y.')
     parser.add_argument('--path_dev_y', type=str, default='europarl/dev.en',
                         help='Path to the monolingual dev set of language Y.')
-
-    parser.add_argument('--Y', type=str, default='Windows', choices=['Apple', 'Windows'],
-                        help='Choose the type of sentences for domain Y.')
 
     # Saving directories and checkpoint/sample iterations
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints_cyclegan')
