@@ -10,15 +10,14 @@ from allennlp.modules import Seq2SeqEncoder
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.attention import DotProductAttention
 from allennlp.modules.token_embedders import Embedding
-from allennlp.nn.util import weighted_sum, get_final_encoder_states
+from allennlp.nn.util import weighted_sum, get_final_encoder_states, sequence_cross_entropy_with_logits
 from overrides import overrides
 from torch.nn.functional import gumbel_softmax, pad
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
 
-# TODO: use LMs as D; possibly pretrained
-
+# TODO: when reconstructing, consider teacher forcing
 #######################################################################################
 ################################ DISCRIMINATOR NETWORK ################################
 #######################################################################################
@@ -303,62 +302,3 @@ class VanillaRnn2Rnn(Model):
             mask = mask.cuda()
         return mask
 
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
-        within the ``forward`` method.
-        This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
-        """
-        predicted_indices = output_dict["predictions"]
-        if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.detach().cpu().numpy()
-        all_predicted_tokens = []
-        all_predicted_indices = []
-        for indices in predicted_indices:
-            indices = list(indices)
-            # Collect indices till the first end_symbol
-            if self._end_index in indices:
-                indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self._target_vocab.get_token_from_index(x, namespace="tokens")
-                                for x in indices]
-            all_predicted_tokens.append(predicted_tokens)
-            all_predicted_indices.append(indices)
-        output_dict["predicted_tokens"] = all_predicted_tokens
-
-        output_dict["predicted_indices"] = all_predicted_indices
-
-        return output_dict
-
-#     @staticmethod
-#     def _get_loss(logits: torch.LongTensor,
-#                   targets: torch.LongTensor,
-#                   target_mask: torch.LongTensor,
-#                   label_smoothing) -> torch.LongTensor:
-#         """
-#         Takes logits (unnormalized outputs from the decoder) of size (batch_size,
-#         num_decoding_steps, num_classes), target indices of size (batch_size, num_decoding_steps+1)
-#         and corresponding masks of size (batch_size, num_decoding_steps+1) steps and computes cross
-#         entropy loss while taking the mask into account.
-#         The length of ``targets`` is expected to be greater than that of ``logits`` because the
-#         decoder does not need to compute the output corresponding to the last timestep of
-#         ``targets``. This method aligns the inputs appropriately to compute the loss.
-#         During training, we want the logit corresponding to timestep i to be similar to the target
-#         token from timestep i + 1. That is, the targets should be shifted by one timestep for
-#         appropriate comparison.  Consider a single example where the target has 3 words, and
-#         padding is to 7 tokens.
-#            The complete sequence would correspond to <S> w1  w2  w3  <E> <P> <P>
-#            and the mask would be                     1   1   1   1   1   0   0
-#            and let the logits be                     l1  l2  l3  l4  l5  l6
-#         We actually need to compare:
-#            the sequence           w1  w2  w3  <E> <P> <P>
-#            with masks             1   1   1   1   0   0
-#            against                l1  l2  l3  l4  l5  l6
-#            (where the input was)  <S> w1  w2  w3  <E> <P>
-#         """
-#         relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
-#         relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
-#         loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask,                                                           label_smoothing = label_smoothing)
-#         return loss

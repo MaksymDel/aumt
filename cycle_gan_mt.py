@@ -8,6 +8,8 @@ import argparse
 import os
 import warnings
 
+from allennlp.nn.util import sequence_cross_entropy_with_logits
+
 warnings.filterwarnings("ignore")
 
 # Torch imports
@@ -39,7 +41,7 @@ def get_next_batch_mask(batch_iterator, embedding):
     embedded_tokens = embedding.forward(sampled_indeces)
     mask = sampled_indeces != 0
 
-    return embedded_tokens, mask
+    return embedded_tokens, mask, sampled_indeces
 
 
 def checkpoint(iteration, G_XtoY, G_YtoX, D_X, D_Y, opts):
@@ -116,6 +118,37 @@ def loss_helper1(x, m):
     return torch.sum(x ** 2) / m
 
 
+def loss_cross_entropy_with_logits(logits: torch.LongTensor,
+              targets: torch.LongTensor,
+              target_mask: torch.LongTensor,
+              label_smoothing=False) -> torch.LongTensor:
+    """
+    Takes logits (unnormalized outputs from the decoder) of size (batch_size,
+    max_decoding_steps, num_classes), target indices of size (batch_size, num_targets)
+    and corresponding masks of size (batch_size, num_targets) steps and computes cross
+    entropy loss while taking the mask into account.
+    The length of ``targets`` is expected to less or euqal to that of ``logits``
+
+     E.g.: the complete sequence would correspond to <S> w1  w2  w3  <E> <P> <P>
+       and the mask would be                     1   1   1   1   1   0   0
+       and let the logits be                     l1  l2  l3  l4  l5  l6  l7  l8  l9 ... l_max_steps
+    We actually need to compare:
+       the sequence           w1  w2  w3  <E> <P> <P>
+       with masks             1   1   1   1   0   0
+       against                l1  l2  l3  l4  l5  l6
+       Input                  w1  w2  w3  <E> <P> <P>
+    """
+
+    relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
+    relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
+
+    maxlen = relevant_mask.size()[1]
+    logits = logits[:, :maxlen, :]
+
+    loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask, label_smoothing)
+    return loss.item()
+
+
 def training_loop(batch_iterator_X, batch_iterator_Y,
                   dev_batch_iterator_X, dev_batch_iterator_Y,
                   vocab_X, vocab_Y, opts):
@@ -145,20 +178,20 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
-    fixed_embedded_sentences_X, fixed_mask_X = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
+    fixed_embedded_sentences_X, fixed_mask_X, _ = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
-    fixed_embedded_sentences_Y, fixed_mask_Y = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
+    fixed_embedded_sentences_Y, fixed_mask_Y, _ = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
 
     for iteration in range(1, opts.train_iters + 1):
 
-        embedded_sentences_X, mask_X = get_next_batch_mask(batch_iterator_X, embedding_X)
+        embedded_sentences_X, mask_X, indexes_X = get_next_batch_mask(batch_iterator_X, embedding_X)
         embedded_sentences_X, mask_X = utils.to_var(embedded_sentences_X), utils.to_var(mask_X).long()
 
-        embedded_sentences_Y, mask_Y = get_next_batch_mask(batch_iterator_Y, embedding_Y)
+        embedded_sentences_Y, mask_Y, indexes_Y = get_next_batch_mask(batch_iterator_Y, embedding_Y)
         embedded_sentences_Y, mask_Y = utils.to_var(embedded_sentences_Y), utils.to_var(mask_Y).long()
 
         # ============================================
@@ -214,16 +247,17 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         g_loss = loss_helper(D_X.forward(embedded_sentences_X_hat, mask_X_hat), n)
 
         if opts.no_cycle_consistency_loss == False:
-            embedded_sentences_Y_reconstructed, mask_Y_reconstructed, _, _, _ = G_XtoY(embedded_sentences_X_hat,
+            embedded_sentences_Y_reconstructed, mask_Y_reconstructed, _, _, logits_Y = G_XtoY(embedded_sentences_X_hat,
                                                                                        mask_X_hat, False).values()
             embedded_sentences_Y_reconstructed, mask_Y_reconstructed = utils.trim_tensors(embedded_sentences_Y,
                                                                                           embedded_sentences_Y_reconstructed,
                                                                                           mask_Y_reconstructed)
 
             # 3. Compute the cycle consistency loss (the reconstruction loss)
-            cycle_consistency_loss = loss_helper1(embedded_sentences_Y - embedded_sentences_Y_reconstructed,
-                                                  n)  # Consider masks?
-            # TODO: USE CROSS ENTROPY HERE
+            # cycle_consistency_loss = loss_helper1(embedded_sentences_Y - embedded_sentences_Y_reconstructed,
+            #                                       n)  # Consider masks?
+
+            cycle_consistency_loss = loss_cross_entropy_with_logits(logits_Y, indexes_Y, mask_Y)
 
             g_loss += cycle_consistency_loss
 
@@ -245,15 +279,16 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         g_loss = loss_helper(D_Y.forward(embedded_sentences_Y_hat, mask_Y_hat), n)
 
         if opts.no_cycle_consistency_loss == False:
-            embedded_sentences_X_reconstructed, mask_X_reconstructed, _, _, _ = G_YtoX(embedded_sentences_Y_hat,
+            embedded_sentences_X_reconstructed, mask_X_reconstructed, _, _, logits_X = G_YtoX(embedded_sentences_Y_hat,
                                                                                        mask_Y_hat, False).values()
             embedded_sentences_X_reconstructed, mask_X_reconstructed = utils.trim_tensors(embedded_sentences_X,
                                                                                           embedded_sentences_X_reconstructed,
                                                                                           mask_X_reconstructed)
 
             # 3. Compute the cycle consistency loss (the reconstruction loss)
-            cycle_consistency_loss = loss_helper1(embedded_sentences_X - embedded_sentences_X_reconstructed, m)
-            # TODO: USE CROSS ENTROPY WITH LOGITS FROM RECONSTRUCTED STUFF AND INPUT SENTENCES INDICES
+#            cycle_consistency_loss = loss_helper1(embedded_sentences_X - embedded_sentences_X_reconstructed, m) # mse loss
+            cycle_consistency_loss = loss_cross_entropy_with_logits(logits_X, indexes_X, mask_X)
+
             g_loss += cycle_consistency_loss
 
             cycle_consistency_loss_X = cycle_consistency_loss
@@ -267,8 +302,8 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
                 print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
                       'd_fake_loss: {:6.4f} | g_loss: {:6.4f} | cycle_Y_loss: {:6.4f} | cycle_X_loss: {:6.4f}'.format(
                     iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
-                    D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0], cycle_consistency_loss_Y.item(),
-                    cycle_consistency_loss_X.item()))
+                    D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0], cycle_consistency_loss_Y,
+                    cycle_consistency_loss_X))
             else:
                 print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
                       'd_fake_loss: {:6.4f} | g_loss: {:6.4f}'.format(
