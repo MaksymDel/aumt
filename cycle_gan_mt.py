@@ -279,7 +279,7 @@ def main(opts):
     """
 
     # Create train and test batch_iterators for sentences from the two domains X and Y
-    mono_dataset_reader = MonolingualDatasetReader(lazy=False)
+    mono_dataset_reader = MonolingualDatasetReader(lazy=False, max_sent_len=opts.max_sent_len)
 
     batch_iterator_X, test_batch_iterator_X, vocab_X = get_iterator_vocab("X", mono_dataset_reader, opts)
     batch_iterator_Y, test_batch_iterator_Y, vocab_Y = get_iterator_vocab("Y", mono_dataset_reader, opts)
@@ -325,8 +325,8 @@ def create_parser():
                         help='Weather to use bidirectional RNN for generators.')
     parser.add_argument('--g_hidden_size', type=int, default=600,
                         help='The number of hidden units in encoder RNN of generatorss.')
-    parser.add_argument('--g_max_decoding_steps', type=int, default=50,
-                        help='The number timesteps at decoder of generators.')
+    parser.add_argument('--g_max_decoding_steps', type=int, default=52,
+                        help='The number timesteps at decoder of generators. Should be max_sent_len + 2. You should add 2 for <start> and <end> symbols')
 
     parser.add_argument('--d_hidden_size', type=int, default=600,
                         help='The number of hidden units in encoder RNN of discriminators.')
@@ -369,6 +369,9 @@ def create_parser():
     # NLP
     parser.add_argument('--max_vocab_size', type=int, default=None,
                         help='Max size for vocabs. Default to use all tokens')
+
+    parser.add_argument('--max_sent_len', type=int, default=50,
+                        help='Removes sentences that are less then max_sent_len tokens long')
 
     return parser
 
