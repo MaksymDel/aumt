@@ -99,13 +99,13 @@ def save_samples(iteration, fixed_embedded_sentences_Y, fixed_mask_Y, fixed_embe
     with open(path, 'w') as f:
         [f.write(" ".join(_list) + '\n') for _list in predicted_tokens_X]
     print('[not supported] Saved {}'.format(path))
-    print('/HYP X:/ ', predicted_tokens_X[0])
+    print('/HYP X:/ ', " ".join(predicted_tokens_X[0]))
 
     path = os.path.join(opts.sample_dir, 'hyps-{:06d}.Y'.format(iteration))
     with open(path, 'w') as f:
         [f.write(" ".join(_list) + '\n') for _list in predicted_tokens_Y]
     print('[not supported] Saved {}'.format(path))
-    print('/HYP Y:/ ', predicted_tokens_Y[0])
+    print('/HYP Y:/ ', " ".join(predicted_tokens_Y[0]))
 
 
 def loss_helper(x, m):
@@ -145,11 +145,11 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
-    fixed_embedded_sentences_X, fixed_mask_X = get_next_batch_mask(batch_iterator_X, embedding_X)
+    fixed_embedded_sentences_X, fixed_mask_X = get_next_batch_mask(test_batch_iterator_X, embedding_X)
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
-    fixed_embedded_sentences_Y, fixed_mask_Y = get_next_batch_mask(batch_iterator_Y, embedding_Y)
+    fixed_embedded_sentences_Y, fixed_mask_Y = get_next_batch_mask(test_batch_iterator_Y, embedding_Y)
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
 
@@ -214,7 +214,6 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         g_loss = loss_helper(D_X.forward(embedded_sentences_X_hat, mask_X_hat), n)
 
         if opts.no_cycle_consistency_loss == False:
-            print(embedded_sentences_X_hat.size(), mask_X_hat.size())
             embedded_sentences_Y_reconstructed, mask_Y_reconstructed, _, _, _ = G_XtoY(embedded_sentences_X_hat,
                                                                                        mask_X_hat, False).values()
             embedded_sentences_Y_reconstructed, mask_Y_reconstructed = utils.trim_tensors(embedded_sentences_Y,
