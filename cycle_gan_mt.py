@@ -245,6 +245,7 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
         # 2. Compute the generator loss based on domain X
         g_loss = loss_helper(D_X.forward(embedded_sentences_X_hat, mask_X_hat), n)
+        g_loss_adv_X2Y = g_loss
 
         if opts.no_cycle_consistency_loss == False:
             embedded_sentences_Y_reconstructed, mask_Y_reconstructed, _, _, logits_Y = G_XtoY(embedded_sentences_X_hat,
@@ -257,11 +258,12 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
             # cycle_consistency_loss = loss_helper1(embedded_sentences_Y - embedded_sentences_Y_reconstructed,
             #                                       n)  # Consider masks?
 
-            cycle_consistency_loss = loss_cross_entropy_with_logits(logits_Y, indexes_Y, mask_Y)
+            cycle_consistency_loss = opts.cycle_loss_weight * loss_cross_entropy_with_logits(logits_Y, indexes_Y, mask_Y)
 
             g_loss += cycle_consistency_loss
 
-            cycle_consistency_loss_Y = cycle_consistency_loss
+            cycle_loss_YXY = cycle_consistency_loss
+
 
         g_loss.backward()
         g_optimizer.step()
@@ -277,6 +279,7 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
         # 2. Compute the generator loss based on domain Y
         g_loss = loss_helper(D_Y.forward(embedded_sentences_Y_hat, mask_Y_hat), n)
+        g_loss_adv_Y2X = g_loss
 
         if opts.no_cycle_consistency_loss == False:
             embedded_sentences_X_reconstructed, mask_X_reconstructed, _, _, logits_X = G_YtoX(embedded_sentences_Y_hat,
@@ -287,11 +290,11 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
             # 3. Compute the cycle consistency loss (the reconstruction loss)
 #            cycle_consistency_loss = loss_helper1(embedded_sentences_X - embedded_sentences_X_reconstructed, m) # mse loss
-            cycle_consistency_loss = loss_cross_entropy_with_logits(logits_X, indexes_X, mask_X)
+            cycle_consistency_loss = opts.cycle_loss_weight * loss_cross_entropy_with_logits(logits_X, indexes_X, mask_X)
 
             g_loss += cycle_consistency_loss
 
-            cycle_consistency_loss_X = cycle_consistency_loss
+            cycle_loss_XYX = cycle_consistency_loss
 
         g_loss.backward()
         g_optimizer.step()
@@ -300,10 +303,10 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         if iteration % opts.log_step == 0:
             if opts.no_cycle_consistency_loss == False:
                 print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
-                      'd_fake_loss: {:6.4f} | g_loss: {:6.4f} | cycle_Y_loss: {:6.4f} | cycle_X_loss: {:6.4f}'.format(
+                      'd_fake_loss: {:6.4f} | g_adv_Y2X_loss: {:6.4f} | g_adv_X2Y_loss | cycle_YXY_loss: {:6.4f} | cycle_XYX_loss: {:6.4f}'.format(
                     iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
-                    D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0], cycle_consistency_loss_Y,
-                    cycle_consistency_loss_X))
+                    D_X_loss.data[0], d_fake_loss.data[0], g_loss_adv_X2Y.data[0], g_loss_adv_Y2X.data[0], cycle_loss_YXY,
+                    cycle_loss_XYX))
             else:
                 print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
                       'd_fake_loss: {:6.4f} | g_loss: {:6.4f}'.format(
@@ -358,6 +361,9 @@ def create_parser():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
+    parser.add_argument('--cycle_loss_weight', type=int, default=0.1)
+
+
     parser.add_argument('--projection_type', type=str, default='gumbel', choices=['gumbel', 'softmax', 'direct'],
                         help="Defines how do we omit hte sampling step. Choices are 'gumbel', 'softmax', and 'direct'.")
 
