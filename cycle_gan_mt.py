@@ -227,6 +227,8 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
             g_loss += cycle_consistency_loss
 
+            cycle_consistency_loss_Y = cycle_consistency_loss
+
         g_loss.backward()
         g_optimizer.step()
 
@@ -254,15 +256,24 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
             # TODO: USE CROSS ENTROPY WITH LOGITS FROM RECONSTRUCTED STUFF AND INPUT SENTENCES INDICES
             g_loss += cycle_consistency_loss
 
+            cycle_consistency_loss_X = cycle_consistency_loss
+
         g_loss.backward()
         g_optimizer.step()
 
         # Print the log info
         if iteration % opts.log_step == 0:
-            print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
-                  'd_fake_loss: {:6.4f} | g_loss: {:6.4f}'.format(
-                iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
-                D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
+            if opts.no_cycle_consistency_loss == False:
+                print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
+                      'd_fake_loss: {:6.4f} | g_loss: {:6.4f} | cycle_Y_loss: {:6.4f} | cycle_X_loss: {:6.4f}'.format(
+                    iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
+                    D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0], cycle_consistency_loss_Y.item(),
+                    cycle_consistency_loss_X.item()))
+            else:
+                print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
+                      'd_fake_loss: {:6.4f} | g_loss: {:6.4f}'.format(
+                    iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
+                    D_X_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
 
         # Save the generated samples
         if iteration % opts.sample_every == 0 or iteration == 1:
