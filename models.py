@@ -123,15 +123,8 @@ class VanillaRnn2Rnn(Model):
         sentence : torch.LongTensor
            Tensor of padded batch of indexed source strings
         """
-        # (batch_size, input_sequence_length, encoder_output_dim)
-        # print(sentence)
-        # tokens_ids = sentence["tokens"]
-        # embedded_input = self._source_embedder(tokens_ids)
         batch_size, _, _ = embedded_input.size()
-        # source_mask = get_text_field_mask(sentence)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-
-        print('ENC OUTS', encoder_outputs.size(), source_mask)
         final_encoder_output = get_final_encoder_states(encoder_outputs, source_mask,
                                                         True)  # (batch_size, encoder_output_dim)
 
@@ -143,7 +136,6 @@ class VanillaRnn2Rnn(Model):
 
         last_predictions = None
         step_logits = []
-        step_probabilities = []
         step_predictions = []
         step_predictions_softmax = []
 
