@@ -92,7 +92,8 @@ def save_samples(iteration, fixed_embedded_sentences_Y, fixed_mask_Y, fixed_embe
     """Saves samples from both generators X->Y and Y->X.
     """
     _, _, predicted_tokens_X, predicted_tokens_softmax_X, _ = G_YtoX(fixed_embedded_sentences_Y, fixed_mask_Y).values()
-    _, _, predicted_tokens_Y, predicted_tokens_softmax_X, _ = G_XtoY(fixed_embedded_sentences_X, fixed_mask_X).values()
+    _, _, predicted_tokens_Y, predicted_tokens_softmax_Y, _ = G_XtoY(fixed_embedded_sentences_X, fixed_mask_X).values()
+
 
     # X, fake_X = utils.to_data(fixed_X), utils.to_data(fake_X)
     # Y, fake_Y = utils.to_data(fixed_Y), utils.to_data(fake_Y)
@@ -100,14 +101,20 @@ def save_samples(iteration, fixed_embedded_sentences_Y, fixed_mask_Y, fixed_embe
     path = os.path.join(opts.sample_dir, 'hyps-{:06d}.X'.format(iteration))
     with open(path, 'w') as f:
         [f.write(" ".join(_list) + '\n') for _list in predicted_tokens_X]
-    print('[not supported] Saved {}'.format(path))
+    print('Saved {}'.format(path))
     print('/HYP X:/ ', " ".join(predicted_tokens_X[0]))
 
     path = os.path.join(opts.sample_dir, 'hyps-{:06d}.Y'.format(iteration))
     with open(path, 'w') as f:
         [f.write(" ".join(_list) + '\n') for _list in predicted_tokens_Y]
-    print('[not supported] Saved {}'.format(path))
+    print('Saved {}'.format(path))
     print('/HYP Y:/ ', " ".join(predicted_tokens_Y[0]))
+
+
+    predicted_tokens_X = predicted_tokens_softmax_X
+    predicted_tokens_Y = predicted_tokens_softmax_Y
+    print('/HYP X SOFTMAX :/ ', " ".join(predicted_tokens_X[0]))
+    print('/HYP Y SOFTMAX:/ ', " ".join(predicted_tokens_Y[0]))
 
 
 def loss_helper(x, m):
@@ -178,13 +185,16 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
-    fixed_embedded_sentences_X, fixed_mask_X, _ = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
+    fixed_embedded_sentences_X, fixed_mask_X, fixed_ids_X = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
-    fixed_embedded_sentences_Y, fixed_mask_Y, _ = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
+    fixed_embedded_sentences_Y, fixed_mask_Y, fixed_ids_Y = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
+
+    print('FIXED X:', " ".join([vocab_X.get_token_from_index(id) for id in fixed_ids_X]))
+    print('FIXED Y: ', " ".join([vocab_Y.get_token_from_index(id) for id in fixed_ids_Y]))
 
     for iteration in range(1, opts.train_iters + 1):
 
@@ -278,7 +288,7 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         embedded_sentences_Y_hat, mask_Y_hat, _, _, _ = G_XtoY.forward(embedded_sentences_X, mask_X).values()
 
         # 2. Compute the generator loss based on domain Y
-        g_loss = loss_helper(D_Y.forward(embedded_sentences_Y_hat, mask_Y_hat), n)
+        g_loss = loss_helper(D_Y.forward(embedded_sentences_Y_hat, mask_Y_hat), m)
         g_loss_adv_Y2X = g_loss
 
         if opts.no_cycle_consistency_loss == False:
@@ -303,7 +313,7 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
         if iteration % opts.log_step == 0:
             if opts.no_cycle_consistency_loss == False:
                 print('Iteration [{:5d}/{:5d}] | d_real_loss: {:6.4f} | d_Y_loss: {:6.4f} | d_X_loss: {:6.4f} | '
-                      'd_fake_loss: {:6.4f} | g_adv_Y2X_loss: {:6.4f} | g_adv_X2Y_loss | cycle_YXY_loss: {:6.4f} | cycle_XYX_loss: {:6.4f}'.format(
+                      'd_fake_loss: {:6.4f} | g_adv_Y2X_loss: {:6.4f} | g_adv_X2Y_loss {:6.4f} | cycle_YXY_loss: {:6.4f} | cycle_XYX_loss: {:6.4f}'.format(
                     iteration, opts.train_iters, d_real_loss.data[0], D_Y_loss.data[0],
                     D_X_loss.data[0], d_fake_loss.data[0], g_loss_adv_X2Y.data[0], g_loss_adv_Y2X.data[0], cycle_loss_YXY,
                     cycle_loss_XYX))
