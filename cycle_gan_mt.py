@@ -146,6 +146,7 @@ def loss_cross_entropy_with_logits(logits: torch.LongTensor,
     logits = logits[:, :maxlen, :].contiguous()
 
     loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask, label_smoothing)
+    print(loss)
     return loss.item()
 
 
