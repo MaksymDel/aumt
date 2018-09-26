@@ -117,7 +117,7 @@ def loss_helper1(x, m):
 
 
 def training_loop(batch_iterator_X, batch_iterator_Y,
-                  test_batch_iterator_X, test_batch_iterator_Y,
+                  dev_batch_iterator_X, dev_batch_iterator_Y,
                   vocab_X, vocab_Y, opts):
     """Runs the training loop.
         * Saves checkpoint every opts.checkpoint_every iterations
@@ -145,11 +145,11 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
-    fixed_embedded_sentences_X, fixed_mask_X = get_next_batch_mask(test_batch_iterator_X, embedding_X)
+    fixed_embedded_sentences_X, fixed_mask_X = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
-    fixed_embedded_sentences_Y, fixed_mask_Y = get_next_batch_mask(test_batch_iterator_Y, embedding_Y)
+    fixed_embedded_sentences_Y, fixed_mask_Y = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
 
