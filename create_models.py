@@ -42,14 +42,20 @@ def create_model(X_vocab, Y_vocab, opts):
                             source_embedding=X_embedding,
                             target_embedding=Y_embedding,
                             encoder=Seq2SeqEncoder.from_params(params=seq2seq_lstm_params_X),
-                            max_decoding_steps=opts.g_max_decoding_steps)
+                            max_decoding_steps=opts.g_max_decoding_steps,
+                            projection_type=opts.projection_type,
+                            gumbel_tau=opts.gumbel_tau,
+                            gumbel_hard=opts.gumbel_hard)
 
     G_YtoX = VanillaRnn2Rnn(source_vocab=Y_vocab,
                             target_vocab=X_vocab,
                             source_embedding=Y_embedding,
                             target_embedding=X_embedding,
                             encoder=Seq2SeqEncoder.from_params(params=seq2seq_lstm_params_Y),
-                            max_decoding_steps=opts.g_max_decoding_steps)
+                            max_decoding_steps=opts.g_max_decoding_steps,
+                            projection_type=opts.projection_type,
+                            gumbel_tau=opts.gumbel_tau,
+                            gumbel_hard=opts.gumbel_hard)
 
     #######################
     # CREATE DISCRIMINATORS

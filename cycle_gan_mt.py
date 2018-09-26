@@ -312,6 +312,12 @@ def create_parser():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
+    parser.add_argument('--projection_type', type=str, default='gumbel',
+                        help="Defines how do we omit hte sampling step. Choices are 'gumbel', 'softmax', and 'direct'.")
+
+    parser.add_argument('--gumbel_tau', type=float, default=0.0000000001)
+    parser.add_argument('--gumbel_hard', type=bool, default=True, help="one hot output?")
+
     parser.add_argument('--no_cycle_consistency_loss', action='store_true', default=False,
                         help='Choose whether to include the cycle consistency term in the loss.')
     parser.add_argument('--init_zero_weights', action='store_true', default=False,

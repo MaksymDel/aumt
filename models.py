@@ -72,7 +72,10 @@ class VanillaRnn2Rnn(Model):
                  source_embedding: Embedding,
                  target_embedding: Embedding,
                  encoder: Seq2SeqEncoder,
-                 max_decoding_steps: int
+                 max_decoding_steps: int,
+                 projection_type: str,
+                 gumbel_tau: float,
+                 gumbel_hard: bool
                  ) -> None:
 
         super(VanillaRnn2Rnn, self).__init__(source_vocab)
@@ -110,6 +113,10 @@ class VanillaRnn2Rnn(Model):
         self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
 
         self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
+
+        self._projection_type = projection_type
+        self._gumbel_tau = gumbel_tau
+        self._gumbel_hard = gumbel_hard
 
     @overrides
     def forward(self,  # type: ignore
@@ -158,13 +165,11 @@ class VanillaRnn2Rnn(Model):
             step_logits.append(output_projections.unsqueeze(1))
 
             # GUMBEL SOFTMAX
-
-            projection_type = 'gumbel'
-            if projection_type == 'gumbel':
-                token_types_weights = gumbel_softmax(logits=output_projections, hard=True, tau=0.0000000001)
-            elif projection_type == 'softmax':
+            if self._projection_type == 'gumbel':
+                token_types_weights = gumbel_softmax(logits=output_projections, hard=self._gumbel_hard, tau=self._gumbel_tau)
+            elif self._projection_type == 'softmax':
                 token_types_weights = F.softmax(output_projections, dim=-1)
-            elif projection_type == 'direct':
+            elif self._projection_type == 'direct':
                 raise NotImplementedError("direct vector prediction is not supportet at the moment")
             else:
                 raise NotImplementedError("wrong projection type value; possible are [gumbel | softmax | direct]")
