@@ -186,15 +186,15 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
     fixed_embedded_sentences_X, fixed_mask_X, fixed_ids_X = get_next_batch_mask(dev_batch_iterator_X, embedding_X)
+    print('FIXED X:', " ".join([vocab_X.get_token_from_index(id) for id in fixed_ids_X[0]]))
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
     fixed_embedded_sentences_Y, fixed_mask_Y, fixed_ids_Y = get_next_batch_mask(dev_batch_iterator_Y, embedding_Y)
+    print('FIXED Y: ', " ".join([vocab_Y.get_token_from_index(id) for id in fixed_ids_Y[0]]))
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
 
-    print('FIXED X:', " ".join([vocab_X.get_token_from_index(id) for id in fixed_ids_X]))
-    print('FIXED Y: ', " ".join([vocab_Y.get_token_from_index(id) for id in fixed_ids_Y]))
 
     for iteration in range(1, opts.train_iters + 1):
 
