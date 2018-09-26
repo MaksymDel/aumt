@@ -35,6 +35,7 @@ if torch.cuda.is_available():
 def get_next_batch_mask(batch_iterator, embedding):
     sampled_batch = batch_iterator.__next__()
     sampled_indeces = sampled_batch['sentence']['tokens']
+    sampled_indeces = utils.to_var(sampled_indeces).long()
     embedded_tokens = embedding.forward(sampled_indeces)
     mask = sampled_indeces != 0
 
@@ -62,10 +63,10 @@ def load_checkpoint(opts):
     D_X_path = os.path.join(opts.load, 'D_X.pkl')
     D_Y_path = os.path.join(opts.load, 'D_Y.pkl')
 
-    G_XtoY = CycleGenerator(conv_dim=opts.g_conv_dim, init_zero_weights=opts.init_zero_weights)
-    G_YtoX = CycleGenerator(conv_dim=opts.g_conv_dim, init_zero_weights=opts.init_zero_weights)
-    D_X = DCDiscriminator(conv_dim=opts.d_conv_dim)
-    D_Y = DCDiscriminator(conv_dim=opts.d_conv_dim)
+    G_XtoY = None #CycleGenerator(conv_dim=opts.g_conv_dim, init_zero_weights=opts.init_zero_weights)
+    G_YtoX = None #CycleGenerator(conv_dim=opts.g_conv_dim, init_zero_weights=opts.init_zero_weights)
+    D_X = None #DCDiscriminator(conv_dim=opts.d_conv_dim)
+    D_Y = None #DCDiscriminator(conv_dim=opts.d_conv_dim)
 
     # print(torch.load(G_XtoY_path, map_location=lambda storage, loc: storage).keys()) #To REMOVE
 
