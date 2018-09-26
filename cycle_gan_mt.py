@@ -363,7 +363,7 @@ def create_parser():
     parser.add_argument('--sample_dir', type=str, default='samples_cyclegan_no_cycle')
     parser.add_argument('--load', type=str, default=None)
     parser.add_argument('--log_step', type=int, default=10)
-    parser.add_argument('--sample_every', type=int, default=10)
+    parser.add_argument('--sample_every', type=int, default=200)
     parser.add_argument('--checkpoint_every', type=int, default=800)
 
     # NLP
