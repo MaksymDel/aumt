@@ -20,6 +20,9 @@ def create_model(X_vocab, Y_vocab, opts):
 
     X_emb_params = Y_emb_params.duplicate()
 
+    Y_emb_params_1 = Y_emb_params.duplicate()
+    X_emb_params_1 = Y_emb_params_1.duplicate()
+
     Y_embedding = Embedding.from_params(vocab=Y_vocab, params=Y_emb_params)
     X_embedding = Embedding.from_params(vocab=X_vocab, params=X_emb_params)
 
@@ -70,6 +73,10 @@ def create_model(X_vocab, Y_vocab, opts):
     })
 
     classifier_params_X = classifier_params_Y.duplicate()
+
+    if not opts.d_share_embeddings_with_g:
+        Y_embedding = Embedding.from_params(vocab=Y_vocab, params=Y_emb_params_1)
+        X_embedding = Embedding.from_params(vocab=X_vocab, params=X_emb_params_1)
 
     D_Y = Seq2Binary(vocab=Y_vocab, embedding=Y_embedding,
                      seq2vec_encoder=Seq2VecEncoder.from_params(classifier_params_Y))
