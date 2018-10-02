@@ -339,7 +339,7 @@ def create_parser():
     parser.add_argument('--cycle_loss_weight', type=int, default=0.1)
 
 
-    parser.add_argument('--projection_type', type=str, default='gumbel', choices=['gumbel', 'softmax', 'direct'],
+    parser.add_argument('--projection_type', type=str, default='softmax', choices=['gumbel', 'softmax', 'direct'],
                         help="Defines how do we omit hte sampling step. Choices are 'gumbel', 'softmax', and 'direct'.")
 
     parser.add_argument('--gumbel_tau', type=float, default=0.0000000001)
