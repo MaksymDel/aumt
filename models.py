@@ -17,7 +17,7 @@ from torch.nn.functional import gumbel_softmax, pad
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
-
+PADDING_SYMBOL = "PADDING_SYMBOL"
 # TODO: when reconstructing, consider teacher forcing
 #######################################################################################
 ################################ DISCRIMINATOR NETWORK ################################
@@ -232,7 +232,7 @@ class VanillaRnn2Rnn(Model):
         output_dict["logits"] = logits
 
         if targets is not None:  # if there are targets, we compute reconstruction loss
-            target_mask = targets != 0  # TODO: 0 is for padding, should fetch this index by @@pad@@ symbol
+            target_mask = targets != self._target_vocab.get_token_index(PADDING_SYMBOL)
             loss = self._get_loss(logits, targets, target_mask)
             output_dict["cycle_loss"] = loss
             # TODO: Define metrics

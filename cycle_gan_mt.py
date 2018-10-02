@@ -26,6 +26,7 @@ from data_loader import get_iterator_vocab, MonolingualDatasetReader
 from create_models import create_model
 
 SEED = 11
+PADDING_SYMBOL = "@@PADDING@@"
 
 # Set the random seed manually for reproducibility.
 np.random.seed(SEED)
@@ -34,12 +35,12 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(SEED)
 
 
-def get_next_batch_with_mask(batch_iterator, embedding):
+def get_next_batch_with_mask(batch_iterator, embedding, pad_idx):
     sampled_batch = batch_iterator.__next__()
     sampled_indeces = sampled_batch['sentence']['tokens']
     sampled_indeces = utils.to_var(sampled_indeces).long()
     embedded_tokens = embedding.forward(sampled_indeces)
-    mask = sampled_indeces != 0
+    mask = sampled_indeces != pad_idx
 
     return embedded_tokens, mask, sampled_indeces
 
@@ -154,12 +155,14 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     # Get some fixed data from domains X and Y for sampling. These are sentences that are held
     # constant throughout training, that allow us to inspect the model's performance.
-    fixed_embedded_sentences_X, fixed_mask_X, fixed_ids_X = get_next_batch_with_mask(dev_batch_iterator_X, embedding_X)
+    fixed_embedded_sentences_X, fixed_mask_X, fixed_ids_X = get_next_batch_with_mask(dev_batch_iterator_X, embedding_X,
+                                                                                     vocab_X.get_token_index("PADDING_SYMBOL"))
     print('FIXED X:', " ".join([vocab_X.get_token_from_index(id.item()) for id in fixed_ids_X[0]]))
     fixed_embedded_sentences_X, fixed_mask_X = utils.to_var(fixed_embedded_sentences_X), utils.to_var(
         fixed_mask_X).long()
 
-    fixed_embedded_sentences_Y, fixed_mask_Y, fixed_ids_Y = get_next_batch_with_mask(dev_batch_iterator_Y, embedding_Y)
+    fixed_embedded_sentences_Y, fixed_mask_Y, fixed_ids_Y = get_next_batch_with_mask(dev_batch_iterator_Y, embedding_Y,
+                                                                                     vocab_Y.get_token_index("PADDING_SYMBOL"))
     print('FIXED Y: ', " ".join([vocab_Y.get_token_from_index(id.item()) for id in fixed_ids_Y[0]]))
     fixed_embedded_sentences_Y, fixed_mask_Y = utils.to_var(fixed_embedded_sentences_Y), utils.to_var(
         fixed_mask_Y).long()
@@ -167,10 +170,12 @@ def training_loop(batch_iterator_X, batch_iterator_Y,
 
     for iteration in range(1, opts.train_iters + 1):
 
-        embedded_sentences_X, mask_X, indexes_X = get_next_batch_with_mask(batch_iterator_X, embedding_X)
+        embedded_sentences_X, mask_X, indexes_X = get_next_batch_with_mask(batch_iterator_X, embedding_X,
+                                                                           vocab_X.get_token_index("PADDING_SYMBOL"))
         embedded_sentences_X, mask_X = utils.to_var(embedded_sentences_X), utils.to_var(mask_X).long()
 
-        embedded_sentences_Y, mask_Y, indexes_Y = get_next_batch_with_mask(batch_iterator_Y, embedding_Y)
+        embedded_sentences_Y, mask_Y, indexes_Y = get_next_batch_with_mask(batch_iterator_Y, embedding_Y,
+                                                                           vocab_Y.get_token_index("PADDING_SYMBOL"))
         embedded_sentences_Y, mask_Y = utils.to_var(embedded_sentences_Y), utils.to_var(mask_Y).long()
 
         # ============================================
