@@ -336,7 +336,7 @@ def create_parser():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
-    parser.add_argument('--cycle_loss_weight', type=int, default=0.1)
+    parser.add_argument('--cycle_loss_weight', type=float, default=0.1)
 
 
     parser.add_argument('--projection_type', type=str, default='softmax', choices=['gumbel', 'softmax', 'direct'],
