@@ -381,13 +381,13 @@ def create_parser():
     parser.add_argument('--beta2', type=float, default=0.999)
 
     # Data sources
-    parser.add_argument('--path_train_x', type=str, default='europarl/train.et',
+    parser.add_argument('--path_train_x', type=str, default='toy_data/train_letters_len10.txt',
                         help='Path to the monolingual train set of lang. X.')
-    parser.add_argument('--path_dev_x', type=str, default='europarl/dev.et',
+    parser.add_argument('--path_dev_x', type=str, default='toy_data/dev_letters_len10.txt',
                         help='Path to the monolingual dev set of lang. X.')
-    parser.add_argument('--path_train_y', type=str, default='europarl/train.en',
+    parser.add_argument('--path_train_y', type=str, default='toy_data/train_digits_len10.txt',
                         help='Path to the monolingual train set of language Y.')
-    parser.add_argument('--path_dev_y', type=str, default='europarl/dev.en',
+    parser.add_argument('--path_dev_y', type=str, default='toy_data/dev_digits_len10.txt',
                         help='Path to the monolingual dev set of language Y.')
 
     # Saving directories and checkpoint/sample iterations
