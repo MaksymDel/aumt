@@ -367,7 +367,7 @@ def create_parser():
                         help='Weather to use bidirectional RNN for discriminators.')
     parser.add_argument('--d_num_layers', type=int, default=1,
                         help='The number of layers in encoder RNN of discriminators.')
-    parser.add_argument('--d_share_embeddings_with_g', action='store_true', default=False,
+    parser.add_argument('--not_share_embeddings_d_g', action='store_true', default=False,
                         help='Weather to share embeddings in discriminators and generators.')
 
     # Training hyper-parameters

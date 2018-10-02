@@ -74,7 +74,7 @@ def create_model(X_vocab, Y_vocab, opts):
 
     classifier_params_X = classifier_params_Y.duplicate()
 
-    if not opts.d_share_embeddings_with_g:
+    if opts.not_share_embeddings_d_g:
         Y_embedding = Embedding.from_params(vocab=Y_vocab, params=Y_emb_params_1)
         X_embedding = Embedding.from_params(vocab=X_vocab, params=X_emb_params_1)
 
