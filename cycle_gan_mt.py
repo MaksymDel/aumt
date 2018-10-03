@@ -119,7 +119,7 @@ def save_samples(iteration, fixed_embedded_sentences_Y, fixed_mask_Y, fixed_embe
 
 
 def loss_helper(x, m):
-    return torch.sum((x - 1) ** 2) / m
+    return -torch.sum(x ** 2) / m
 
 
 def loss_helper1(x, m):

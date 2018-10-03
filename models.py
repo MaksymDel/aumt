@@ -196,7 +196,7 @@ class VanillaRnn2Rnn(Model):
             softmax_classes = torch.argmax(output_projections, dim=-1).long() # sampling after softmax operation
             predicted_classes = torch.argmax(token_types_weights, dim=-1).long() # sampling after custom projection
             # (batch_size, 1)
-            # we pass there softmax golden labels always
+            # self feeding
             last_predictions = predicted_classes  # usually it is not differentiable, but I can do it so if I want
 
             step_predictions.append(predicted_classes.unsqueeze(1))
